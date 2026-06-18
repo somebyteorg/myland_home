@@ -38,10 +38,18 @@ export interface PlayerItem {
     gender: string
     gender_string: string
     avatar: string | null
+    color: string | null
+    manifesto: string | null
     tick_current_birth_format: PlayerBirthFormat | null
     tick_age_string: string | number | null
     reason_death: string | null
     is_can_play: boolean
+}
+
+export interface UpdatePlayerPayload {
+    avatar?: string | null
+    color?: string | null
+    manifesto?: string | null
 }
 
 export interface PlayerListResponse {

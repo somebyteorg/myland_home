@@ -2,10 +2,8 @@
 import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue'
 import {useClipboard} from '@vueuse/core'
 import api from '@/utils/ky'
-import {compressImageBlob} from '@/utils/image'
-import {uploadFile} from '@/utils/upload'
 import type {BirthIdentity, CreatePlayerGender, MapVillageItem, PlayerItem, PlayerListResponse} from '@/types/home'
-import AvatarCropDialog from './AvatarCropDialog.vue'
+import PlayerEditDialog from './PlayerEditDialog.vue'
 import {birthIdentityOptions, genderOptions} from './homeContent'
 
 const props = defineProps<{
@@ -29,11 +27,8 @@ const playerTotal = ref(0)
 const playerPage = ref(1)
 const players = ref<PlayerItem[]>([])
 const copiedPlayerId = ref('')
-const avatarInputRef = ref<HTMLInputElement | null>(null)
-const avatarCropSrc = ref('')
-const avatarCropError = ref('')
-const avatarSaving = ref(false)
-const avatarPlayer = ref<PlayerItem | null>(null)
+const editOpen = ref(false)
+const editingPlayer = ref<PlayerItem | null>(null)
 const createPlayerOpen = ref(false)
 const createNameInputRef = ref<HTMLInputElement | null>(null)
 const createPlayerForm = ref<{ name: string; gender: CreatePlayerGender }>({
@@ -51,7 +46,6 @@ const alivePlayersCount = computed(() => players.value.filter((p) => p.is_can_pl
 const canCreatePlayer = computed(() => alivePlayersCount.value < MAX_ALIVE_PLAYERS)
 
 let copiedPlayerIdTimer: number | undefined
-let avatarObjectUrl: string | undefined
 const {copy: copyToClipboard, isSupported: clipboardSupported} = useClipboard()
 
 watch(
@@ -69,7 +63,8 @@ watch(
       playerListError.value = ''
       playerCreateError.value = ''
       copiedPlayerId.value = ''
-      closeAvatarCrop(true)
+      editOpen.value = false
+      editingPlayer.value = null
     },
 )
 
@@ -143,22 +138,18 @@ async function loadVillages() {
   }
 }
 
-function revokeAvatarObjectUrl() {
-  if (avatarObjectUrl) {
-    URL.revokeObjectURL(avatarObjectUrl)
-    avatarObjectUrl = undefined
-  }
-}
-
-function closeAvatarCrop(force = false) {
-  if (avatarSaving.value && !force) {
+function openEditPlayer(player: PlayerItem) {
+  if (!player.is_can_play) {
     return
   }
 
-  revokeAvatarObjectUrl()
-  avatarCropSrc.value = ''
-  avatarCropError.value = ''
-  avatarPlayer.value = null
+  editingPlayer.value = player
+  editOpen.value = true
+}
+
+function onPlayerUpdated(updated: PlayerItem) {
+  players.value = players.value.map((item) => (item.player_id === updated.player_id ? updated : item))
+  editingPlayer.value = updated
 }
 
 async function loadPlayers(page = 1) {
@@ -279,72 +270,6 @@ function enterPlayerWorld(player: PlayerItem) {
   window.open(`/web?token=${token}&player_id=${playerId}`, '_blank', 'noopener,noreferrer')
 }
 
-function selectAvatarFile(player: PlayerItem) {
-  if (!player.is_can_play) {
-    return
-  }
-
-  avatarPlayer.value = player
-  avatarCropError.value = ''
-  avatarInputRef.value?.click()
-}
-
-function onAvatarFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-
-  if (!file) {
-    return
-  }
-
-  if (!file.type.startsWith('image/')) {
-    avatarCropError.value = '请选择图片文件。'
-    return
-  }
-
-  revokeAvatarObjectUrl()
-  avatarObjectUrl = URL.createObjectURL(file)
-  avatarCropSrc.value = avatarObjectUrl
-}
-
-async function saveAvatar(blob: Blob) {
-  const player = avatarPlayer.value
-
-  if (!player) {
-    return
-  }
-
-  avatarSaving.value = true
-  avatarCropError.value = ''
-
-  try {
-    const compressedBlob = await compressImageBlob(blob, {
-      maxWidth: 512,
-      maxHeight: 512,
-      quality: 0.82,
-      type: 'image/jpeg',
-    })
-    const uploaded = await uploadFile(compressedBlob, `${player.player_id}-avatar.jpg`)
-
-    await api.put(`api/player/${player.player_id}/avatar`, {
-      json: {
-        avatar_url: uploaded.url,
-      },
-    })
-
-    players.value = players.value.map((item) => (item.player_id === player.player_id ? {
-      ...item,
-      avatar: uploaded.url
-    } : item))
-    avatarSaving.value = false
-    closeAvatarCrop(true)
-  } catch {
-    avatarCropError.value = '头像保存失败，请稍后再试。'
-    avatarSaving.value = false
-  }
-}
-
 function handleRetryOrSignIn() {
   if (props.token) {
     void loadPlayers(players.value.length ? playerPage.value : 1)
@@ -375,7 +300,6 @@ async function copyPlayerId(playerId: string) {
 
 onBeforeUnmount(() => {
   window.clearTimeout(copiedPlayerIdTimer)
-  revokeAvatarObjectUrl()
 })
 </script>
 
@@ -410,8 +334,6 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="max-h-[min(70dvh,680px)] overflow-y-auto px-5 py-5 md:px-6">
-          <input ref="avatarInputRef" class="sr-only" type="file" accept="image/*" @change="onAvatarFileChange"/>
-
           <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p class="text-sm leading-relaxed text-[#666]">选择角色进入游戏世界，或创建一个新角色。</p>
             <button
@@ -429,10 +351,6 @@ onBeforeUnmount(() => {
               <span>新增角色</span>
             </button>
           </div>
-          <p v-if="avatarCropError && !avatarCropSrc"
-             class="mb-4 rounded-lg bg-[#FFF7F7] px-4 py-3 text-sm font-semibold text-[#B04444] ring-1 ring-[#F0C8C8]">
-            {{ avatarCropError }}
-          </p>
 
           <form
               v-if="createPlayerOpen"
@@ -584,15 +502,20 @@ onBeforeUnmount(() => {
                 <div class="flex min-w-0 flex-1 gap-4">
                   <button
                       type="button"
-                      class="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#E8F5E8] text-lg font-black text-[#5FA35F] transition"
+                      class="group relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#E8F5E8] text-lg font-black text-[#5FA35F] transition"
                       :class="player.is_can_play ? 'cursor-pointer hover:ring-2 hover:ring-[#5FA35F]/35' : 'cursor-not-allowed'"
                       :disabled="!player.is_can_play"
-                      :title="player.is_can_play ? '点击修改头像' : getDisabledReason(player)"
-                      @click="selectAvatarFile(player)"
+                      :title="player.is_can_play ? '点击编辑角色' : getDisabledReason(player)"
+                      @click="openEditPlayer(player)"
                   >
                     <img v-if="player.avatar" :src="player.avatar" :alt="`${player.name} 头像`"
                          class="h-full w-full object-cover"/>
                     <span v-else>{{ player.name.slice(0, 1) || '?' }}</span>
+                    <span
+                        v-if="player.is_can_play"
+                        class="absolute inset-x-0 bottom-0 bg-black/45 py-0.5 text-center text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                      编辑
+                    </span>
                   </button>
 
                   <div class="min-w-0 flex-1">
@@ -608,28 +531,65 @@ onBeforeUnmount(() => {
                           class="rounded-full border border-[#E8E4D8] bg-[#FAF8F2] px-2.5 py-1 text-xs font-bold text-[#666]">{{
                           getAgeText(player)
                         }}</span>
+                      <span
+                          v-if="player.color"
+                          class="inline-flex items-center gap-1.5 rounded-full border border-[#E8E4D8] bg-[#FAF8F2] px-2.5 py-1 text-xs font-bold text-[#666]"
+                          title="住宅颜色"
+                      >
+                        <span class="h-3 w-3 rounded-full border border-black/10"
+                              :style="{ backgroundColor: player.color }"/>
+                        住宅
+                      </span>
                     </div>
 
-                    <dl class="mt-3 text-sm text-[#666]">
-                      <div class="rounded-lg border border-[#E8E4D8] bg-[#FAF8F2] px-3 py-2">
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div class="min-w-0">
-                            <dt class="font-semibold text-[#999]">出生时间</dt>
-                            <dd class="mt-1 wrap-break-word font-medium leading-relaxed text-[#2C2C2C]">
-                              {{ displayPlayerValue(player.tick_current_birth_format?.string) }}
-                            </dd>
-                          </div>
-                          <button
-                              type="button"
-                              class="inline-flex max-w-full shrink-0 items-center rounded-full border border-[#E8E4D8] bg-[#FAF8F2] px-2.5 py-1 font-mono text-[11px] font-semibold leading-none text-[#777] transition hover:border-[#5FA35F]/35 hover:text-[#5FA35F] sm:max-w-[18rem]"
-                              :title="`点击复制 ${player.player_id}`"
-                              @click="copyPlayerId(player.player_id)"
-                          >
-                            {{ copiedPlayerId === player.player_id ? '已复制' : player.player_id }}
-                          </button>
+                    <dl class="mt-3 flex flex-col gap-3 rounded-xl border border-[#E8E4D8] bg-[#FAF8F2] px-3.5 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E8F5E8] text-[#5FA35F]">
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7v5l3 2"/>
+                          </svg>
+                        </span>
+                        <div class="min-w-0">
+                          <dt class="text-xs font-semibold text-[#999]">出生时间</dt>
+                          <dd class="mt-0.5 wrap-break-word font-semibold leading-snug text-[#2C2C2C]">
+                            {{ displayPlayerValue(player.tick_current_birth_format?.string) }}
+                          </dd>
                         </div>
                       </div>
+                      <button
+                          type="button"
+                          class="inline-flex max-w-full shrink-0 items-center gap-1.5 self-start rounded-full border border-[#E8E4D8] bg-white px-2.5 py-1.5 font-mono text-[11px] font-semibold leading-none text-[#888] transition hover:border-[#5FA35F]/45 hover:text-[#5FA35F] sm:max-w-[18rem] sm:self-auto"
+                          :title="`点击复制 ${player.player_id}`"
+                          @click="copyPlayerId(player.player_id)"
+                      >
+                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <rect width="13" height="13" x="9" y="9" rx="2"/>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        <span class="truncate">{{
+                            copiedPlayerId === player.player_id ? '已复制' : player.player_id
+                          }}</span>
+                      </button>
                     </dl>
+
+                    <div v-if="player.manifesto"
+                         class="mt-3 flex items-start gap-2.5 rounded-xl border border-[#E8E4D8] bg-[#FAF8F2] px-3.5 py-2.5">
+                      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E8F5E8] text-[#5FA35F]">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </span>
+                      <div class="min-w-0">
+                        <p class="text-xs font-semibold text-[#999]">角色宣言</p>
+                        <p class="mt-0.5 line-clamp-2 wrap-break-word text-sm leading-relaxed text-[#5C5C5C]">
+                          {{ player.manifesto }}
+                        </p>
+                      </div>
+                    </div>
 
                     <p v-if="!player.is_can_play"
                        class="mt-3 rounded-lg bg-[#FFF7F7] px-3 py-2 text-sm font-semibold text-[#B04444] ring-1 ring-[#F0C8C8]">
@@ -638,15 +598,31 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <button
-                    type="button"
-                    class="inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition"
-                    :class="player.is_can_play ? 'bg-[#5FA35F] text-white shadow-[0_4px_14px_rgba(95,163,95,0.22)] hover:bg-[#4A8A4A]' : 'cursor-not-allowed border border-[#E8E4D8] bg-[#FAF8F2] text-[#999]'"
-                    :disabled="!player.is_can_play"
-                    @click="enterPlayerWorld(player)"
-                >
-                  <span>进入世界</span>
-                </button>
+                <div class="flex shrink-0 items-center gap-2 lg:flex-col lg:items-stretch">
+                  <button
+                      type="button"
+                      class="inline-flex items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-bold transition"
+                      :class="player.is_can_play ? 'border-[#E8E4D8] bg-white text-[#2C2C2C] hover:border-[#5FA35F] hover:text-[#5FA35F]' : 'cursor-not-allowed border-[#E8E4D8] bg-[#FAF8F2] text-[#999]'"
+                      :disabled="!player.is_can_play"
+                      @click="openEditPlayer(player)"
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 20h9"/>
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                    </svg>
+                    <span>编辑</span>
+                  </button>
+                  <button
+                      type="button"
+                      class="inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition"
+                      :class="player.is_can_play ? 'bg-[#5FA35F] text-white shadow-[0_4px_14px_rgba(95,163,95,0.22)] hover:bg-[#4A8A4A]' : 'cursor-not-allowed border border-[#E8E4D8] bg-[#FAF8F2] text-[#999]'"
+                      :disabled="!player.is_can_play"
+                      @click="enterPlayerWorld(player)"
+                  >
+                    <span>进入世界</span>
+                  </button>
+                </div>
               </div>
             </article>
 
@@ -665,12 +641,10 @@ onBeforeUnmount(() => {
     </div>
   </Teleport>
 
-  <AvatarCropDialog
-      :open="Boolean(avatarCropSrc)"
-      :src="avatarCropSrc"
-      :saving="avatarSaving"
-      :error="avatarCropError"
-      @close="closeAvatarCrop"
-      @confirm="saveAvatar"
+  <PlayerEditDialog
+      :open="editOpen"
+      :player="editingPlayer"
+      @close="editOpen = false"
+      @updated="onPlayerUpdated"
   />
 </template>
