@@ -23,7 +23,6 @@ export const iconPaths: Record<IconName, string[]> = {
         'M4 20 20 4',
     ],
     ascension: ['M13 2 4 14h7l-1 8 10-14h-7l1-6Z'],
-    market: ['M4 19V5', 'M4 19h16', 'M8 15l3-4 3 2 5-7'],
     globe: [
         'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z',
         'M2 12h20',
@@ -39,20 +38,6 @@ export const features: Array<{ icon: IconName; title: string; role: string }> = 
     {icon: 'alliance', title: '联盟', role: '凝聚人心 受人敬仰'},
     {icon: 'stealth', title: '偷窃', role: '暗夜行窃 声名狼藉'},
     {icon: 'ascension', title: '渡劫', role: '历经千劫 终得飞升'},
-]
-
-export const timeEvents: Array<{ icon: IconName; text: string }> = [
-    {icon: 'plant', text: '田地里的作物仍在生长，疏于照料也会枯萎'},
-    {icon: 'market', text: '市场价格悄悄波动，机会与风险同在'},
-    {icon: 'stealth', text: '也许有人正盯着你的仓库'},
-    {icon: 'alliance', text: '盟友与对手，都在暗中行动'},
-    {icon: 'ascension', text: '节气流转，渡劫的时机正在临近'},
-]
-
-export const timeScaleItems = [
-    {real: '现实 1 小时', game: '游戏 1 天（360 tick）'},
-    {real: '现实 1 天', game: '游戏 1 季度（春夏秋冬）'},
-    {real: '现实 4 天', game: '游戏 1 年（地元历）'},
 ]
 
 export const genderOptions: Array<{ value: CreatePlayerGender; label: string }> = [

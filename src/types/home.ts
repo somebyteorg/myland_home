@@ -76,4 +76,4 @@ export interface CreatePlayerPayload {
 }
 
 export type WeatherName = 'spring-rain' | 'heavy-rain' | 'sunny' | 'drought' | 'mist' | 'thunderstorm'
-export type IconName = 'plant' | 'trade' | 'alliance' | 'stealth' | 'ascension' | 'market' | 'globe' | 'clock' | 'arrow'
+export type IconName = 'plant' | 'trade' | 'alliance' | 'stealth' | 'ascension' | 'globe' | 'clock' | 'arrow'
