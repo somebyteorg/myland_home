@@ -10,6 +10,7 @@ export interface TimeInfo {
 export interface VersionInfo {
     number: string
     time: string
+    is_test: boolean
 }
 
 export interface WeatherItem {

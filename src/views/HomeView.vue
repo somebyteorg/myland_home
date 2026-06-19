@@ -64,6 +64,7 @@ const versionText = computed(() => {
 
   return `v${version.value.number} · 更新于 ${version.value.time}`
 })
+const isTestServer = computed(() => Boolean(version.value?.is_test))
 const currentSeason = computed(() => currentTime.value?.season || '')
 const seasonProgress = computed(() => {
   const day = currentTime.value?.day || 0
@@ -391,6 +392,7 @@ onBeforeUnmount(() => {
     <HomeNav
         :nav-scrolled="navScrolled"
         :is-signed-in="sign.isSignedIn"
+        :is-test-server="isTestServer"
         :display-name="displayName"
         :avatar="sign.avatar"
         :profile-open="profileOpen"
@@ -435,7 +437,13 @@ onBeforeUnmount(() => {
     <HomeBackToTop :visible="showBackToTop" @click="scrollToTop"/>
 
     <TokenDialog :open="tokenDialogOpen" :token="sign.user_token" @close="closeTokenDialog"/>
-    <PlayerDialog :open="playerDialogOpen" :token="sign.user_token" @close="closePlayerDialog" @sign-in="signIn"/>
+    <PlayerDialog
+        :open="playerDialogOpen"
+        :token="sign.user_token"
+        :is-test-server="isTestServer"
+        @close="closePlayerDialog"
+        @sign-in="signIn"
+    />
 
     <Teleport to="body">
       <div

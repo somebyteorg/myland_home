@@ -9,6 +9,7 @@ import {birthIdentityOptions, genderOptions} from './homeContent'
 const props = defineProps<{
   open: boolean
   token: string
+  isTestServer: boolean
 }>()
 
 const emit = defineEmits<{
@@ -334,6 +335,26 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="max-h-[min(70dvh,680px)] overflow-y-auto px-5 py-5 md:px-6">
+          <div
+              v-if="isTestServer"
+              class="test-server-notice mb-5"
+              role="status"
+              aria-label="测试服提示：当前为测试服，数据可能随时清空"
+          >
+            <div class="test-server-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
+                   stroke-linejoin="round">
+                <path d="M12 3 2.8 19a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L12 3Z"/>
+                <path d="M12 9v5"/>
+                <path d="M12 18h.01"/>
+              </svg>
+            </div>
+            <div class="test-server-copy">
+              <strong>当前为测试服</strong>
+              <span>功能和数值仍在调整，所有角色、资产与进度都可能随时清空。</span>
+            </div>
+          </div>
+
           <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p class="text-sm leading-relaxed text-[#666]">选择角色进入游戏世界，或创建一个新角色。</p>
             <button
@@ -648,3 +669,72 @@ onBeforeUnmount(() => {
       @updated="onPlayerUpdated"
   />
 </template>
+
+<style scoped>
+.test-server-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border: 1px solid rgba(176, 68, 68, 0.28);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #FFFAF4;
+  padding: 0.9rem 1rem;
+  color: #2C2C2C;
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(126, 58, 36, 0.08);
+}
+
+.test-server-icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #B04444;
+  color: #FFFFFF;
+}
+
+.test-server-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.test-server-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.test-server-copy strong {
+  color: #B04444;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.test-server-copy span {
+  color: #6B4A3D;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .test-server-notice {
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.8rem 0.85rem;
+  }
+
+  .test-server-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .test-server-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+</style>

@@ -4,6 +4,7 @@ import {computed, ref, watch} from 'vue'
 const props = defineProps<{
   navScrolled: boolean
   isSignedIn: boolean
+  isTestServer: boolean
   displayName: string
   avatar: string | null
   profileOpen: boolean
@@ -41,9 +42,10 @@ const nameInitial = computed(() => props.displayName.slice(0, 1).toUpperCase())
       :class="navScrolled ? 'bg-[#FAF8F2]/90 shadow-[0_2px_16px_rgba(0,0,0,0.05)] backdrop-blur-xl' : 'bg-transparent'"
   >
     <a href="#hero"
-       class="relative z-50 flex items-center gap-2 text-lg font-black tracking-wide text-[#2C2C2C] md:text-xl">
+       class="relative z-50 flex min-w-0 items-center gap-2 text-lg font-black tracking-wide text-[#2C2C2C] md:text-xl">
       <img src="/favicon.svg" alt="一亩三分地 Logo" class="h-8 w-8 md:h-[34px] md:w-[34px]"/>
       <span>一亩三分地</span>
+      <span v-if="isTestServer" class="test-server-badge">测试服</span>
     </a>
 
     <div class="hidden items-center gap-7 md:flex">
@@ -145,6 +147,21 @@ const nameInitial = computed(() => props.displayName.slice(0, 1).toUpperCase())
 </template>
 
 <style scoped>
+.test-server-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(176, 68, 68, 0.26);
+  border-radius: 999px;
+  background: rgba(176, 68, 68, 0.09);
+  padding: 0.18rem 0.5rem;
+  color: #B04444;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .nav-link {
   position: relative;
   color: #555;
