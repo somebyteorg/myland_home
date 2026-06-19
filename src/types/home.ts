@@ -13,6 +13,32 @@ export interface VersionInfo {
     is_test: boolean
 }
 
+export interface SeasonHourItem {
+    value: string
+    label: string
+}
+
+export interface TimeFlowStep {
+    real: string
+    game: string
+    note: string
+}
+
+export interface ChronicleItem {
+    event_id: number
+    text: string
+    tick_format: {
+        string: string
+    }
+}
+
+export interface ChronicleResponse {
+    page: number
+    page_size: number
+    total: number
+    items: ChronicleItem[]
+}
+
 export interface WeatherItem {
     className: string
     style: Record<string, string>
