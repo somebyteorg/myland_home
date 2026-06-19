@@ -2,13 +2,13 @@
 import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue'
 import {useClipboard} from '@vueuse/core'
 import api from '@/utils/ky'
+import useSignStore from '@/stores/sign'
 import type {BirthIdentity, CreatePlayerGender, MapVillageItem, PlayerItem, PlayerListResponse} from '@/types/home'
 import PlayerEditDialog from './PlayerEditDialog.vue'
 import {birthIdentityOptions, genderOptions} from './homeContent'
 
 const props = defineProps<{
   open: boolean
-  token: string
   isTestServer: boolean
 }>()
 
@@ -19,6 +19,7 @@ const emit = defineEmits<{
 
 const PLAYER_PAGE_SIZE = 5
 const MAX_ALIVE_PLAYERS = 3
+const sign = useSignStore()
 
 const playerLoading = ref(false)
 const playerCreating = ref(false)
@@ -154,7 +155,7 @@ function onPlayerUpdated(updated: PlayerItem) {
 }
 
 async function loadPlayers(page = 1) {
-  if (!props.token) {
+  if (!sign.isSignedIn) {
     players.value = []
     playerTotal.value = 0
     playerPage.value = 1
@@ -200,6 +201,11 @@ async function loadMorePlayers() {
 }
 
 function toggleCreatePlayerForm() {
+  if (!sign.isSignedIn) {
+    emit('signIn')
+    return
+  }
+
   createPlayerOpen.value = !createPlayerOpen.value
   playerCreateError.value = ''
 
@@ -227,7 +233,7 @@ async function createPlayer() {
     return
   }
 
-  if (!props.token) {
+  if (!sign.isSignedIn) {
     playerCreateError.value = '请先登录后新增角色。'
     return
   }
@@ -262,17 +268,17 @@ async function createPlayer() {
 }
 
 function enterPlayerWorld(player: PlayerItem) {
-  if (!player.is_can_play || !props.token) {
+  if (!player.is_can_play || !sign.user_token) {
     return
   }
 
-  const token = encodeURIComponent(props.token)
+  const token = encodeURIComponent(sign.user_token)
   const playerId = encodeURIComponent(player.player_id)
   window.open(`/web?token=${token}&player_id=${playerId}`, '_blank', 'noopener,noreferrer')
 }
 
 function handleRetryOrSignIn() {
-  if (props.token) {
+  if (sign.isSignedIn) {
     void loadPlayers(players.value.length ? playerPage.value : 1)
     return
   }
@@ -356,8 +362,11 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-sm leading-relaxed text-[#666]">选择角色进入游戏世界，或创建一个新角色。</p>
+            <p class="text-sm leading-relaxed text-[#666]">
+              {{ sign.isSignedIn ? '选择角色进入游戏世界，或创建一个新角色。' : '请先登录后查看角色，并在登录后创建新角色。' }}
+            </p>
             <button
+                v-if="sign.isSignedIn"
                 type="button"
                 class="inline-flex items-center justify-center gap-2 rounded-full bg-[#5FA35F] px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(95,163,95,0.22)] transition hover:-translate-y-0.5 hover:bg-[#4A8A4A] disabled:cursor-not-allowed disabled:opacity-60"
                 :disabled="playerCreating || !canCreatePlayer"
@@ -374,7 +383,7 @@ onBeforeUnmount(() => {
           </div>
 
           <form
-              v-if="createPlayerOpen"
+              v-if="createPlayerOpen && sign.isSignedIn"
               class="mb-5 rounded-lg border border-[#5FA35F]/20 bg-white p-4 shadow-[0_8px_24px_rgba(95,163,95,0.1)] md:p-5"
               @submit.prevent="createPlayer"
           >
@@ -503,7 +512,7 @@ onBeforeUnmount(() => {
                 class="inline-flex justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-[#B04444] ring-1 ring-[#F0C8C8] transition hover:bg-[#FFF2F2]"
                 @click="handleRetryOrSignIn"
             >
-              {{ token ? '重试' : '登录' }}
+              {{ sign.isSignedIn ? '重试' : '登录' }}
             </button>
           </div>
 

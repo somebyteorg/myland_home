@@ -1,5 +1,6 @@
 import ky from 'ky'
 import signStore from '@/stores/sign'
+import {startSignInFlow} from '@/utils/auth'
 
 export {ky}
 
@@ -19,8 +20,9 @@ const instance = ky.create({
         ],
         afterResponse: [
             async (_request, _options, response) => {
-                if (response.status == 401) {
+                if (response.status === 401) {
                     await signStore().signOut()
+                    startSignInFlow()
                 }
             },
         ],

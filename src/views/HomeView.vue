@@ -11,6 +11,7 @@ import HomeNav from '@/components/home/HomeNav.vue'
 import HomeTimeSection from '@/components/home/HomeTimeSection.vue'
 import PlayerDialog from '@/components/home/PlayerDialog.vue'
 import TokenDialog from '@/components/home/TokenDialog.vue'
+import {startSignInFlow} from '@/utils/auth'
 import {
   heroPlayObjects,
   heroPlayPositionSlots,
@@ -215,7 +216,7 @@ async function loadUserInfo() {
 }
 
 function signIn() {
-  window.location.assign('/api/sign')
+  startSignInFlow()
 }
 
 function openTokenDialog() {
@@ -439,7 +440,6 @@ onBeforeUnmount(() => {
     <TokenDialog :open="tokenDialogOpen" :token="sign.user_token" @close="closeTokenDialog"/>
     <PlayerDialog
         :open="playerDialogOpen"
-        :token="sign.user_token"
         :is-test-server="isTestServer"
         @close="closePlayerDialog"
         @sign-in="signIn"
