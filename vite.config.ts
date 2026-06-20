@@ -9,6 +9,13 @@ export default defineConfig({
     build: {
         emptyOutDir: true,
         assetsDir: './home_assets',
+        // https://github.com/vueuse/vueuse/issues/5387
+        rolldownOptions: {
+            onLog(level, log, defaultHandler) {
+                if (log.code === 'INVALID_ANNOTATION') return
+                else defaultHandler(level, log)
+            },
+        }
     },
     resolve: {
         alias: {
