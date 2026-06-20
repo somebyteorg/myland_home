@@ -13,7 +13,6 @@ export function useHomeSession() {
     const playerDialogOpen = ref(false)
     const unbindTelegramDialogOpen = ref(false)
     const unbindingTelegram = ref(false)
-    const unbindCancelButtonRef = ref<HTMLButtonElement | null>(null)
 
     let copyFeedbackTimer: number | undefined
     const {copy: copyToClipboard, isSupported: clipboardSupported} = useClipboard()
@@ -78,10 +77,6 @@ export function useHomeSession() {
         unbindTelegramDialogOpen.value = true
         profileOpen.value = false
         mobileMenuOpen.value = false
-
-        requestAnimationFrame(() => {
-            unbindCancelButtonRef.value?.focus()
-        })
     }
 
     function closeUnbindTelegramDialog() {
@@ -145,7 +140,6 @@ export function useHomeSession() {
         playerDialogOpen,
         unbindTelegramDialogOpen,
         unbindingTelegram,
-        unbindCancelButtonRef,
         displayName,
         loadUserInfo,
         signIn,

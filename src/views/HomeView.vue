@@ -54,7 +54,6 @@ const {
   playerDialogOpen,
   unbindTelegramDialogOpen,
   unbindingTelegram,
-  unbindCancelButtonRef,
   displayName,
   loadUserInfo,
   signIn,
@@ -190,7 +189,6 @@ onBeforeUnmount(() => {
             <p class="text-sm leading-relaxed text-[#666]">解绑后将无法使用 Telegram 模式游玩。</p>
             <div class="mt-5 flex justify-end gap-3">
               <button
-                  ref="unbindCancelButtonRef"
                   type="button"
                   class="rounded-full border border-[#E8E4D8] px-5 py-2 text-sm font-semibold text-[#2C2C2C] transition hover:border-[#5FA35F]"
                   :disabled="unbindingTelegram"
