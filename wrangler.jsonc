@@ -24,7 +24,7 @@
       "zone_name": "emos.somebyte.org"
     },
     {
-      "pattern": "myland.somebyte.org/favicon.svg",
+      "pattern": "myland.somebyte.org/favicon.*",
       "zone_name": "emos.somebyte.org"
     },
     {
