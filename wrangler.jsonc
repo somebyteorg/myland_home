@@ -5,7 +5,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "myland-home",
-  "compatibility_date": "2026-06-14",
+  "compatibility_date": "2026-06-22",
   "assets": {
     "not_found_handling": "single-page-application",
     "directory": "./dist"
@@ -21,19 +21,19 @@
   "routes": [
     {
       "pattern": "myland.somebyte.org/",
-      "zone_name": "emos.somebyte.org"
+      "zone_name": "somebyte.org"
     },
     {
       "pattern": "myland.somebyte.org/favicon.*",
-      "zone_name": "emos.somebyte.org"
+      "zone_name": "somebyte.org"
     },
     {
       "pattern": "myland.somebyte.org/home_assets/*",
-      "zone_name": "emos.somebyte.org"
+      "zone_name": "somebyte.org"
     },
     {
       "pattern": "myland.somebyte.org/robots.txt",
-      "zone_name": "emos.somebyte.org"
+      "zone_name": "somebyte.org"
     }
   ]
 }
