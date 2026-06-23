@@ -9,8 +9,10 @@ const chronicleItems = ref<ChronicleItem[]>([])
 const chroniclePage = ref(1)
 const chronicleTotal = ref(0)
 const chronicleLoading = ref(false)
+const chronicleRefreshing = ref(false)
 const chronicleInitialized = ref(false)
 const chronicleError = ref('')
+const chronicleFailedPage = ref<number | null>(null)
 
 const chronicleHasMore = computed(() => chronicleItems.value.length < chronicleTotal.value)
 const chronicleCanLoad = computed(() => chronicleHasMore.value || Boolean(chronicleError.value))
@@ -22,12 +24,13 @@ const chronicleCountText = computed(() => {
   return `${chronicleItems.value.length} / ${chronicleTotal.value} 条`
 })
 
-async function loadChronicle(page = 1) {
+async function loadChronicle(page = 1, options: {refresh?: boolean} = {}) {
   if (chronicleLoading.value) {
     return
   }
 
   chronicleLoading.value = true
+  chronicleRefreshing.value = Boolean(options.refresh)
   chronicleError.value = ''
 
   try {
@@ -42,6 +45,7 @@ async function loadChronicle(page = 1) {
 
     chroniclePage.value = response.page
     chronicleTotal.value = response.total
+    chronicleFailedPage.value = null
 
     if (page === 1) {
       chronicleItems.value = response.items ?? []
@@ -49,9 +53,11 @@ async function loadChronicle(page = 1) {
       chronicleItems.value = [...chronicleItems.value, ...(response.items ?? [])]
     }
   } catch {
+    chronicleFailedPage.value = page
     chronicleError.value = page === 1 ? '编年史暂时无法载入' : '加载失败，请稍后重试'
   } finally {
     chronicleLoading.value = false
+    chronicleRefreshing.value = false
     chronicleInitialized.value = true
   }
 }
@@ -61,7 +67,11 @@ function loadMoreChronicle() {
     return
   }
 
-  void loadChronicle(chronicleError.value ? chroniclePage.value : chroniclePage.value + 1)
+  void loadChronicle(chronicleFailedPage.value ?? chroniclePage.value + 1)
+}
+
+function refreshChronicle() {
+  void loadChronicle(1, {refresh: true})
 }
 
 onMounted(() => {
@@ -76,9 +86,22 @@ onMounted(() => {
         <p class="text-sm font-bold text-[#5FA35F]">编年史</p>
         <h3 class="mt-1 text-2xl font-extrabold text-[#253126]">村庄纪事</h3>
       </div>
-      <span class="shrink-0 rounded-full bg-[#EFF6EE] px-3 py-1 text-sm font-bold text-[#60715F]">
-        {{ chronicleCountText }}
-      </span>
+      <div class="flex shrink-0 items-center gap-2">
+        <span class="rounded-full bg-[#EFF6EE] px-3 py-1 text-sm font-bold text-[#60715F]">
+          {{ chronicleCountText }}
+        </span>
+        <button
+            type="button"
+            class="grid h-8 w-8 place-items-center rounded-full border border-[#C9DCC6] bg-white text-base font-bold leading-none text-[#4F8E4D] shadow-sm transition hover:border-[#5FA35F] hover:bg-[#F2FAF2] disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="chronicleLoading"
+            title="刷新"
+            aria-label="刷新村庄纪事"
+            @click="refreshChronicle"
+        >
+          <span class="sr-only">刷新</span>
+          <span aria-hidden="true" class="inline-block" :class="chronicleRefreshing ? 'animate-spin' : ''">↻</span>
+        </button>
+      </div>
     </div>
 
     <div class="chronicle-scroll h-[min(420px,62vh)] overflow-y-auto overscroll-contain px-4 py-4 md:h-[500px] md:px-6 md:py-5 lg:h-[566px]">
