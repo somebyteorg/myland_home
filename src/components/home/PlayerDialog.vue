@@ -3,7 +3,7 @@ import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue'
 import {useClipboard} from '@vueuse/core'
 import api from '@/utils/ky'
 import useSignStore from '@/stores/sign'
-import type {BirthIdentity, CreatePlayerGender, MapVillageItem, PlayerItem, PlayerListResponse} from '@/types/home'
+import type {BirthIdentity, CreatePlayerGender, MapZoneItem, PlayerItem, PlayerListResponse} from '@/types/home'
 import PlayerEditDialog from './PlayerEditDialog.vue'
 import {birthIdentityOptions, genderOptions} from './homeContent'
 
@@ -38,10 +38,10 @@ const createPlayerForm = ref<{ name: string; gender: CreatePlayerGender }>({
   gender: 'male',
 })
 const birthIdentity = ref<BirthIdentity>('child')
-const selectedVillageId = ref<number | null>(null)
-const villages = ref<MapVillageItem[]>([])
-const villagesLoading = ref(false)
-const villagesError = ref('')
+const selectedZoneId = ref<number | null>(null)
+const zones = ref<MapZoneItem[]>([])
+const zonesLoading = ref(false)
+const zonesError = ref('')
 
 const hasMorePlayers = computed(() => players.value.length < playerTotal.value)
 const alivePlayersCount = computed(() => players.value.filter((p) => p.is_can_play).length)
@@ -106,37 +106,37 @@ function resetCreatePlayerForm() {
     gender: 'male',
   }
   birthIdentity.value = 'child'
-  selectedVillageId.value = villages.value[0]?.id ?? null
+  selectedZoneId.value = zones.value[0]?.id ?? null
 }
 
-async function loadVillages() {
-  if (villagesLoading.value) {
+async function loadZones() {
+  if (zonesLoading.value) {
     return
   }
 
-  villagesLoading.value = true
-  villagesError.value = ''
+  zonesLoading.value = true
+  zonesError.value = ''
 
   try {
     const result = await api
         .get('api/map/list', {
           searchParams: {
-            map_type: 'village',
+            map_type: 'zone',
           },
         })
-        .json<MapVillageItem[]>()
+        .json<MapZoneItem[]>()
 
-    villages.value = result || []
+    zones.value = result || []
 
-    if (selectedVillageId.value === null || !villages.value.some((village) => village.id === selectedVillageId.value)) {
-      selectedVillageId.value = villages.value[0]?.id ?? null
+    if (selectedZoneId.value === null || !zones.value.some((zone) => zone.id === selectedZoneId.value)) {
+      selectedZoneId.value = zones.value[0]?.id ?? null
     }
   } catch {
-    villages.value = []
-    selectedVillageId.value = null
-    villagesError.value = '村庄列表加载失败，请稍后再试。'
+    zones.value = []
+    selectedZoneId.value = null
+    zonesError.value = '区域列表加载失败，请稍后再试。'
   } finally {
-    villagesLoading.value = false
+    zonesLoading.value = false
   }
 }
 
@@ -210,8 +210,8 @@ function toggleCreatePlayerForm() {
   playerCreateError.value = ''
 
   if (createPlayerOpen.value) {
-    if (!villages.value.length) {
-      void loadVillages()
+    if (!zones.value.length) {
+      void loadZones()
     }
 
     void nextTick(() => {
@@ -240,8 +240,8 @@ async function createPlayer() {
 
   const isAdult = birthIdentity.value === 'adult'
 
-  if (isAdult && selectedVillageId.value === null) {
-    playerCreateError.value = '请选择出生村庄。'
+  if (isAdult && selectedZoneId.value === null) {
+    playerCreateError.value = '请选择出生区域。'
     return
   }
 
@@ -253,7 +253,7 @@ async function createPlayer() {
       json: {
         name,
         gender: createPlayerForm.value.gender,
-        village_id: isAdult ? selectedVillageId.value : null,
+        village_id: isAdult ? selectedZoneId.value : null,
       },
     })
 
@@ -448,16 +448,16 @@ onBeforeUnmount(() => {
                 </p>
 
                 <div v-else class="mt-3 max-w-sm">
-                  <span class="mb-2 block text-sm font-bold text-[#2C2C2C]">出生村庄</span>
+                  <span class="mb-2 block text-sm font-bold text-[#2C2C2C]">出生区域</span>
                   <div class="relative">
                     <select
-                        v-model="selectedVillageId"
-                        aria-label="出生村庄"
+                        v-model="selectedZoneId"
+                        aria-label="出生区域"
                         class="h-11 w-full appearance-none rounded-lg border border-[#E8E4D8] bg-[#FAF8F2] pl-4 pr-10 text-sm text-[#2C2C2C] outline-none transition focus:border-[#5FA35F] focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                        :disabled="villagesLoading || !villages.length"
+                        :disabled="zonesLoading || !zones.length"
                     >
-                      <option v-for="village in villages" :key="village.id" :value="village.id">{{
-                          village.name
+                      <option v-for="zone in zones" :key="zone.id" :value="zone.id">{{
+                          zone.name
                         }}
                       </option>
                     </select>
@@ -467,14 +467,14 @@ onBeforeUnmount(() => {
                       <path d="m6 9 6 6 6-6"/>
                     </svg>
                   </div>
-                  <p v-if="villagesLoading" class="mt-1.5 text-xs text-[#999]">村庄列表加载中...</p>
-                  <p v-else-if="villagesError" class="mt-1.5 text-xs text-[#B04444]">
-                    {{ villagesError }}
+                  <p v-if="zonesLoading" class="mt-1.5 text-xs text-[#999]">区域列表加载中...</p>
+                  <p v-else-if="zonesError" class="mt-1.5 text-xs text-[#B04444]">
+                    {{ zonesError }}
                     <button type="button" class="ml-1 font-semibold text-[#5FA35F] underline-offset-2 hover:underline"
-                            @click="loadVillages">重试
+                            @click="loadZones">重试
                     </button>
                   </p>
-                  <p v-else-if="!villages.length" class="mt-1.5 text-xs text-[#999]">暂无可选村庄</p>
+                  <p v-else-if="!zones.length" class="mt-1.5 text-xs text-[#999]">暂无可选区域</p>
                 </div>
               </div>
 

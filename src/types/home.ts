@@ -90,7 +90,7 @@ export type CreatePlayerGender = 'male' | 'female' | 'other'
 
 export type BirthIdentity = 'child' | 'adult'
 
-export interface MapVillageItem {
+export interface MapZoneItem {
     id: number
     name: string
 }
